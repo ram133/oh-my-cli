@@ -1,0 +1,19 @@
+name: Daily Health Check v1
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Site
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" https://ram133.github.io/oh-my-cli/)
+          if [ "$status" -ne 200 ]; then
+            echo "Site returned status $status"
+            exit 1
+          fi
+          echo "Site is up with status 200"
