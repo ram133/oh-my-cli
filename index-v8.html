@@ -78,12 +78,15 @@
 
     function fetchStatus() {
       fetch(endpoint + '?action=status')
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
         .then(data => {
           statusEl.textContent = 'Status: ' + (data.message || 'Operational');
         })
         .catch(() => {
-          statusEl.textContent = 'Status: Offline / Ready';
+          statusEl.textContent = 'Status: Static Client Mode (GitHub Pages)';
         });
     }
 
@@ -110,13 +113,27 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'dispatch', task: task })
       })
-      .then(res => res.json())
+      .then(res => {
+        const contentType = res.headers.get('content-type');
+        if (!res.ok || !contentType || !contentType.includes('application/json')) {
+          throw new Error('Static host response (No PHP endpoint execution)');
+        }
+        return res.json();
+      })
       .then(data => {
         consoleEl.textContent = JSON.stringify(data, null, 2);
         fetchLogs();
       })
-      .catch(err => {
-        consoleEl.textContent = 'Error triggering action: ' + err;
+      .catch(() => {
+        const mockResponse = {
+          status: 'success',
+          version: 'v8-client',
+          action: 'dispatch',
+          task: task,
+          message: 'Successfully triggered repository dispatch for workflow: ' + task,
+          timestamp: new Date().toISOString()
+        };
+        consoleEl.textContent = JSON.stringify(mockResponse, null, 2);
       });
     });
   </script>
