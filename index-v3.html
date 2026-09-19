@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>oh-my-CLI Dashboard v3</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --accent: #238636;
+      --accent-hover: #2ea043;
+      --blue: #58a6ff;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      max-width: 900px;
+      width: 100%;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: #fff;
+    }
+    .status-badge {
+      background: #1f6feb;
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+    }
+    .nav-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    .panel {
+      display: none;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px;
+    }
+    .panel.active {
+      display: block;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      box-sizing: border-box;
+    }
+    button.submit-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.submit-btn:hover {
+      background: var(--accent-hover);
+    }
+    pre {
+      background: var(--bg);
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>oh-my-CLI Control Panel</h1>
+    <span class="status-badge" id="pingStatus">Checking Status...</span>
+  </header>
+
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('dispatch')">Dispatch Task</button>
+    <button class="tab-btn" onclick="switchTab('logs')">System Console</button>
+  </div>
+
+  <div id="dispatch" class="panel active">
+    <h3>Trigger Repository Dispatch</h3>
+    <p>Send an automated task payload to trigger a GitHub Action workflow remotely.</p>
+    
+    <label for="patToken">GitHub Personal Access Token (PAT):</label>
+    <input type="password" id="patToken" placeholder="ghp_xxxxxxxxxxxx">
+
+    <label for="taskSelect">Select Task:</label>
+    <select id="taskSelect">
+      <option value="audit">Run Code Audit</option>
+      <option value="ping">Run Uptime Ping</option>
+      <option value="triage">Run Issue Triage</option>
+    </select>
+
+    <button class="submit-btn" onclick="sendDispatch()">Dispatch Task Event</button>
+  </div>
+
+  <div id="logs" class="panel">
+    <h3>Output Console</h3>
+    <pre id="consoleOutput">System initialized. Awaiting action...</pre>
+  </div>
+</div>
+
+<script>
+  function switchTab(tabId) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  async function checkUptime() {
+    try {
+      const res = await fetch(window.location.href, { method: 'HEAD' });
+      document.getElementById('pingStatus').innerText = res.ok ? 'HTTP 200 OK' : 'Status: ' + res.status;
+    } catch (e) {
+      document.getElementById('pingStatus').innerText = 'Offline';
+    }
+  }
+
+  async function sendDispatch() {
+    const token = document.getElementById('patToken').value;
+    const task = document.getElementById('taskSelect').value;
+    const consoleElem = document.getElementById('consoleOutput');
+
+    if (!token) {
+      alert('Please enter a GitHub Access Token.');
+      return;
+    }
+
+    consoleElem.innerText = 'Sending dispatch event...';
+
+    try {
+      const response = await fetch('https://api.github.com/repos/ram133/oh-my-cli/dispatches', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          event_type: 'run-task',
+          client_payload: { task_name: task }
+        })
+      });
+
+      if (response.status === 204) {
+        consoleElem.innerText = `Success: Event 'run-task' dispatched for task '${task}'. Check the Actions tab in GitHub.`;
+      } else {
+        const err = await response.json();
+        consoleElem.innerText = `Error (${response.status}): ${JSON.stringify(err, null, 2)}`;
+      }
+    } catch (err) {
+      consoleElem.innerText = `Fetch Error: ${err.message}`;
+    }
+  }
+
+  checkUptime();
+</script>
+
+</body>
+</html>
