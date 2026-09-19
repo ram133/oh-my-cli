@@ -1,0 +1,17 @@
+name: Code Audit v1
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Audit Repository Files
+        run: |
+          echo "Auditing modified files in PR..."
+          ls -la
