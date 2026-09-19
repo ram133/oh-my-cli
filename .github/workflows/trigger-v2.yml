@@ -1,0 +1,23 @@
+name: Event Trigger Handler v2
+
+on:
+  repository_dispatch:
+    types: [run-task]
+  workflow_dispatch:
+    inputs:
+      task_name:
+        description: 'Task name to execute'
+        required: true
+        default: 'audit'
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log Execution Trigger
+        run: |
+          echo "Triggered via: ${{ github.event_name }}"
+          echo "Executing task: ${{ github.event.inputs.task_name || github.event.client_payload.task_name }}"
