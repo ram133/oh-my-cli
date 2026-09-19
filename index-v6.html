@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>oh-my-CLI Control Panel v6</title>
+  <link rel="manifest" href="manifest-v1.json">
+  <style>
+    body { font-family: monospace; background: #121212; color: #00ff66; padding: 20px; }
+    .nav { margin-bottom: 20px; }
+    .nav a { color: #00ff66; margin-right: 10px; text-decoration: none; }
+    .card { border: 1px solid #00ff66; padding: 15px; margin-bottom: 20px; }
+    select, button { background: #000; color: #00ff66; border: 1px solid #00ff66; padding: 8px; font-family: monospace; }
+    pre { background: #000; padding: 10px; border: 1px dashed #00ff66; overflow-x: auto; }
+  </style>
+</head>
+<body>
+
+  <header class="card">
+    <h1>oh-my-CLI Control Panel v6</h1>
+    <span id="status">Status: Connecting...</span>
+  </header>
+
+  <div class="nav">
+    <a href="index.html">v1</a>
+    <a href="index-v2.html">v2</a>
+    <a href="index-v3.html">v3</a>
+    <a href="index-v4.html">v4</a>
+    <a href="index-v5.html">v5</a>
+    <a href="index-v6.html">v6</a>
+  </div>
+
+  <div class="card">
+    <h3>Trigger Repository Dispatch</h3>
+    <p>Send an automated task payload to trigger a GitHub Action workflow remotely.</p>
+    <select id="taskSelect">
+      <option value="audit">Run Code Audit</option>
+      <option value="ping">Run Uptime Ping</option>
+      <option value="triage">Run Issue Triage</option>
+    </select>
+    <button id="dispatchBtn">Dispatch Task</button>
+  </div>
+
+  <div class="card">
+    <h3>Output Console</h3>
+    <pre id="console">System initialized. Awaiting action...</pre>
+  </div>
+
+  <script src="config-v1.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw-v1.js').catch(() => {});
+    }
+
+    const consoleEl = document.getElementById('console');
+    const statusEl = document.getElementById('status');
+
+    fetch(CLI_CONFIG.endpoint + '?action=status')
+      .then(res => res.json())
+      .then(data => {
+        statusEl.textContent = 'Status: ' + data.message;
+      })
+      .catch(() => {
+        statusEl.textContent = 'Status: Offline / Ready';
+      });
+
+    document.getElementById('dispatchBtn').addEventListener('click', () => {
+      const task = document.getElementById('taskSelect').value;
+      consoleEl.textContent = 'Sending dispatch for task: ' + task + '...';
+
+      fetch(CLI_CONFIG.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'dispatch', task: task })
+      })
+      .then(res => res.json())
+      .then(data => {
+        consoleEl.textContent = JSON.stringify(data, null, 2);
+      })
+      .catch(err => {
+        consoleEl.textContent = 'Error triggering action: ' + err;
+      });
+    });
+  </script>
+</body>
+</html>
